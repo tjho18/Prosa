@@ -143,6 +143,25 @@ export default function NovelEditor({ novel: initialNovel, chapters: initialChap
               <button onClick={newChapter} className="btn-ink" style={{ fontSize: 13 }}>+ New chapter</button>
             </div>
 
+            {/* Warn when chapters are live but the novel is still hidden as a draft */}
+            {novel.status === 'draft' && chapters.some(c => c.published_at) && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+                background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8,
+                padding: '12px 16px', marginBottom: 24, flexWrap: 'wrap',
+              }}>
+                <p style={{ fontFamily: 'var(--sans)', fontSize: 13, color: '#92400e', margin: 0 }}>
+                  ⚠ Chapters are live but this novel is still <strong>draft</strong> — it won&apos;t appear on the homepage.
+                </p>
+                <button
+                  onClick={() => saveNovel({ status: 'complete' })}
+                  style={{ fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, background: '#92400e', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  Publish novel →
+                </button>
+              </div>
+            )}
+
             {chapters.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '80px 0' }}>
                 <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 20, color: 'var(--ink-mute)', margin: '0 0 24px' }}>
