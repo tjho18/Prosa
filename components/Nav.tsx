@@ -72,9 +72,6 @@ export default function Nav() {
             <Link href="/" style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-mute)', textDecoration: 'none', padding: '0 14px', letterSpacing: '0.02em' }}>
               Explore
             </Link>
-            <Link href="/serials" style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-mute)', textDecoration: 'none', padding: '0 14px', letterSpacing: '0.02em' }}>
-              Serials
-            </Link>
           </nav>
 
           <div style={{ flex: 1 }} />
@@ -167,7 +164,6 @@ export default function Nav() {
             {/* Nav items */}
             <div style={{ padding: '8px 0', borderBottom: '1px solid var(--rule)' }}>
               <DrawerLink href="/" label="Home" icon="home" active={pathname === '/'} onClick={() => setDrawerOpen(false)} />
-              <DrawerLink href="/serials" label="Serials" icon="serial" active={pathname === '/serials'} onClick={() => setDrawerOpen(false)} />
               {user && <DrawerLink href="/?tab=following" label="Following" icon="following" active={pathname === '/' && false} onClick={() => setDrawerOpen(false)} />}
             </div>
 

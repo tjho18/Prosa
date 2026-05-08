@@ -20,10 +20,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   const supabase = await createClient()
 
-  // Featured novel: most recently updated published novel
+  // Featured novel: most recently updated novel with at least one published chapter
+  // (no status filter — the hero always shows the author's work)
   const { data: featuredRaw } = await supabase
     .from('novels').select('*, profiles(*)')
-    .neq('status', 'draft')
+    .gt('published_chapters', 0)
     .order('updated_at', { ascending: false })
     .limit(1)
     .single()
@@ -46,7 +47,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       }
     }
   } else {
-    let query = supabase.from('novels').select('*, profiles(*)').neq('status', 'draft')
+    let query = supabase.from('novels').select('*, profiles(*)').gt('published_chapters', 0)
     if (activeTab !== 'all') query = query.eq('status', activeTab)
     const { data } = await query.order('created_at', { ascending: false }).limit(60)
     all = (data ?? []) as unknown as DisplayNovel[]
@@ -130,7 +131,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         maxWidth: 'var(--wide-width)', margin: '0 auto',
       }}>
         <span style={{ fontFamily: 'var(--display)', fontStyle: 'italic', fontSize: 17, color: 'var(--ink)' }}>Prosa</span>
-        <Link href="/serials" style={{ textDecoration: 'none', color: 'var(--ink-faint)' }}>Serials</Link>
         <Link href="/write" style={{ textDecoration: 'none', color: 'var(--ink-faint)' }}>Write</Link>
         <span style={{ marginLeft: 'auto' }}>est. mmxxvi</span>
       </footer>
