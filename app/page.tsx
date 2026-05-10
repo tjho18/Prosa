@@ -229,7 +229,7 @@ export default async function HomePage() {
               marginLeft: 'auto',
               marginRight: 'auto',
             }}>
-              {tagline.split('\n').map((line, i) => (
+              {tagline.split('\n').map((line: string, i: number) => (
                 <span key={i}>{line}{i < tagline.split('\n').length - 1 && <br />}</span>
               ))}
             </p>
