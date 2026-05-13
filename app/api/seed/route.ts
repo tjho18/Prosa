@@ -573,38 +573,62 @@ export async function GET() {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Sign in first.' }, { status: 401 })
+    return NextResponse.json({ error: 'Not signed in. Sign in to the site first, then visit this URL.' }, { status: 401 })
   }
 
-  // Find the novel by slug — also try common slug variants
-  let novel: { id: string } | null = null
-  for (const slug of ['the-boy-and-the-sea', 'the-boy-and-the-sea-1', 'boy-and-the-sea']) {
+  // ── Step 1: find any existing novel by this user that looks like our novel ──
+  let novelId: string | null = null
+
+  // Try slug variants first
+  for (const slug of ['the-boy-and-the-sea', 'the-boy-and-the-sea-1', 'boy-sea', 'boy-and-sea']) {
+    const { data } = await supabase.from('novels').select('id').eq('slug', slug).maybeSingle()
+    if (data) { novelId = (data as { id: string }).id; break }
+  }
+
+  // Try title match
+  if (!novelId) {
     const { data } = await supabase
+      .from('novels').select('id, title, slug')
+      .ilike('title', '%boy%sea%').maybeSingle()
+    if (data) novelId = (data as { id: string }).id
+  }
+
+  // Show all novels for debugging, then create fresh
+  if (!novelId) {
+    const { data: allNovels } = await supabase
+      .from('novels').select('id, title, slug').eq('author_id', user.id).limit(20)
+
+    // Create the novel from scratch
+    const { data: created, error: createErr } = await supabase
       .from('novels')
+      .insert({
+        title: 'The Boy and the Sea',
+        slug: 'the-boy-and-the-sea',
+        author_id: user.id,
+        status: 'complete',
+        published_chapters: 0,
+        tagline: 'Some loves are not meant to last.\nSome oceans never let go.',
+        cover_bg: '#0a1525',
+        cover_ink: '#e8e4dc',
+        cover_accent: '#8fa3b1',
+        cover_layout: 'banded',
+      })
       .select('id')
-      .eq('slug', slug)
-      .single()
-    if (data) { novel = data as { id: string }; break }
-  }
+      .maybeSingle()
 
-  // Fallback: find any novel owned by this user
-  if (!novel) {
-    const { data } = await supabase
-      .from('novels')
-      .select('id, title, slug')
-      .eq('author_id', user.id)
-      .limit(10)
-    if (data && data.length > 0) {
+    if (createErr || !created) {
       return NextResponse.json({
-        error: 'Could not find novel by slug. Your novels:',
-        novels: data,
-      }, { status: 404 })
+        error: 'Could not find or create novel.',
+        createError: createErr?.message,
+        yourNovels: allNovels,
+        userId: user.id,
+      }, { status: 500 })
     }
-    return NextResponse.json({ error: 'No novels found for your account.' }, { status: 404 })
+    novelId = (created as { id: string }).id
   }
 
-  // Wipe existing chapters
-  await supabase.from('chapters').delete().eq('novel_id', novel.id)
+  // ── Step 2: wipe existing chapters ──
+  await supabase.from('chapters').delete().eq('novel_id', novelId)
 
   const now = new Date().toISOString()
   const errors: string[] = []
@@ -616,7 +640,7 @@ export async function GET() {
       .filter(Boolean).length
 
     const { error } = await supabase.from('chapters').insert({
-      novel_id: novel.id,
+      novel_id: novelId,
       number: ch.number,
       title: ch.title,
       content: ch.content,
@@ -629,12 +653,12 @@ export async function GET() {
     if (error) errors.push(`Ch ${ch.number}: ${error.message}`)
   }
 
-  // Update novel metadata
+  // ── Step 3: update novel metadata ──
   await supabase.from('novels').update({
     published_chapters: CHAPTERS.length,
     status: 'complete',
     updated_at: now,
-  }).eq('id', novel.id)
+  }).eq('id', novelId)
 
   if (errors.length) {
     return NextResponse.json({ ok: false, errors }, { status: 500 })
