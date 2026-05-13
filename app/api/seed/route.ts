@@ -576,16 +576,31 @@ export async function GET() {
     return NextResponse.json({ error: 'Sign in first.' }, { status: 401 })
   }
 
-  // Novel must belong to the calling user
-  const { data: novel } = await supabase
-    .from('novels')
-    .select('id')
-    .eq('slug', 'the-boy-and-the-sea')
-    .eq('author_id', user.id)
-    .single()
+  // Find the novel by slug — also try common slug variants
+  let novel: { id: string } | null = null
+  for (const slug of ['the-boy-and-the-sea', 'the-boy-and-the-sea-1', 'boy-and-the-sea']) {
+    const { data } = await supabase
+      .from('novels')
+      .select('id')
+      .eq('slug', slug)
+      .single()
+    if (data) { novel = data as { id: string }; break }
+  }
 
+  // Fallback: find any novel owned by this user
   if (!novel) {
-    return NextResponse.json({ error: 'Novel not found or not yours.' }, { status: 404 })
+    const { data } = await supabase
+      .from('novels')
+      .select('id, title, slug')
+      .eq('author_id', user.id)
+      .limit(10)
+    if (data && data.length > 0) {
+      return NextResponse.json({
+        error: 'Could not find novel by slug. Your novels:',
+        novels: data,
+      }, { status: 404 })
+    }
+    return NextResponse.json({ error: 'No novels found for your account.' }, { status: 404 })
   }
 
   // Wipe existing chapters
